@@ -7,16 +7,16 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# 1. Enable CORS so the browser-based grader can verify it directly
+# 1. Enable CORS (allowing any HTTP/HTTPS origin with credentials)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex="https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2. In-Memory Stores (since we are stateless between service runs, this is perfect)
+# 2. In-Memory Stores
 IDEMPOTENCY_STORE = {}    # Stores cached order responses for idempotency keys
 RATE_LIMIT_STORE = {}     # Stores timestamps of requests for each Client ID
 
@@ -44,16 +44,15 @@ async def rate_limiter(request: Request, call_next):
         # Clean up timestamps older than 10 seconds
         RATE_LIMIT_STORE[client_id] = [t for t in RATE_LIMIT_STORE[client_id] if now - t <= 10]
         
-                # Check if they exceeded the limit: 20 requests per 10 seconds
-                # Check if they exceeded the limit: 20 requests per 10 seconds
+        # Check if they exceeded the limit: 20 requests per 10 seconds
         if len(RATE_LIMIT_STORE[client_id]) >= 20:
             # Calculate remaining cooldown time
             retry_after = 10 - (now - RATE_LIMIT_STORE[client_id][0])
             
-            # Get the exact origin of the requester
+            # Dynamically grab the requester's origin
             origin = request.headers.get("origin")
             
-            # Setup headers dynamically to support credentialed requests
+            # Setup headers to support credentialed requests
             headers = {
                 "Retry-After": str(int(max(1, retry_after))),
                 "Access-Control-Allow-Origin": origin if origin else "*",
