@@ -52,12 +52,13 @@ async def rate_limiter(request: Request, call_next):
             # Dynamically grab the requester's origin
             origin = request.headers.get("origin")
             
-            # Setup headers to support credentialed requests
+            # Setup headers (including Expose-Headers so browser JS can read Retry-After)
             headers = {
                 "Retry-After": str(int(max(1, retry_after))),
                 "Access-Control-Allow-Origin": origin if origin else "*",
                 "Access-Control-Allow-Headers": "*",
                 "Access-Control-Allow-Methods": "*",
+                "Access-Control-Expose-Headers": "Retry-After",  # 👈 Exposes the header to the browser
             }
             if origin:
                 headers["Access-Control-Allow-Credentials"] = "true"
