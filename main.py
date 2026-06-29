@@ -44,14 +44,19 @@ async def rate_limiter(request: Request, call_next):
         # Clean up timestamps older than 10 seconds
         RATE_LIMIT_STORE[client_id] = [t for t in RATE_LIMIT_STORE[client_id] if now - t <= 10]
         
-        # Check if they exceeded the limit: 20 requests per 10 seconds
+                # Check if they exceeded the limit: 20 requests per 10 seconds
         if len(RATE_LIMIT_STORE[client_id]) >= 20:
             # Calculate remaining cooldown time
             retry_after = 10 - (now - RATE_LIMIT_STORE[client_id][0])
             return JSONResponse(
                 status_code=429,
                 content={"error": "Too Many Requests. Rate limit exceeded."},
-                headers={"Retry-After": str(int(max(1, retry_after)))}
+                headers={
+                    "Retry-After": str(int(max(1, retry_after))),
+                    "Access-Control-Allow-Origin": "*",      # 👈 Add this
+                    "Access-Control-Allow-Headers": "*",     # 👈 Add this
+                    "Access-Control-Allow-Methods": "*"      # 👈 Add this
+                }
             )
             
         # Record this request's timestamp
